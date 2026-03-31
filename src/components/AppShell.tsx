@@ -28,7 +28,7 @@ export default function AppShell({ activeTab, onTabChange, children }: AppShellP
               <Bike className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-lg font-bold leading-tight tracking-tight">PyöräHKI</h1>
+              <h1 className="text-lg font-bold leading-tight tracking-tight">Cycle.On</h1>
               <p className="text-[10px] text-muted-foreground leading-none">Helsinki Cycling</p>
             </div>
           </div>
