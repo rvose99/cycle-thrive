@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bike, LayoutDashboard, Route, Trophy, Gift, Users, Menu, X } from "lucide-react";
+import { Bike, LayoutDashboard, Route, Trophy, Gift, Users, Menu, X, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AppShellProps {
