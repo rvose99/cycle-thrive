@@ -35,7 +35,7 @@ const ratingConfig: Record<
 export default function ConditionReportForm({ onSubmit, isLoading }: ConditionReportFormProps) {
   const [type, setType] = useState<ReportType>("point");
   const [rating, setRating] = useState<ConditionRating>("mediocre");
-  const [reason, setReason] = useState(faultReasons[0]);
+  const [reason, setReason] = useState<string>(faultReasons[0]);
   const [description, setDescription] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
   const [endLocationQuery, setEndLocationQuery] = useState("");

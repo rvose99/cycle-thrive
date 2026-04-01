@@ -11,6 +11,7 @@ interface AppShellProps {
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "routes", label: "Route Planner", icon: Route },
+  { id: "conditions", label: "Conditions", icon: AlertTriangle },
   { id: "goals", label: "Goals & Rewards", icon: Gift },
   { id: "competition", label: "Competition", icon: Users },
 ];
