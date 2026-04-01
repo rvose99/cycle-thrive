@@ -1,10 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { mockRoutes, modeColors } from "./routeData";
+import { modeColors } from "./routeData";
 
-// Fix default marker icons in Leaflet + bundlers
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
@@ -16,23 +15,38 @@ interface RouteMapProps {
   visibleModes: Set<string>;
   origin: string;
   destination: string;
+  routes: Record<string, [number, number][]>;
+  startPoint: [number, number];
+  endPoint: [number, number];
 }
 
 function FitBounds({ coordinates }: { coordinates: [number, number][] }) {
   const map = useMap();
   useEffect(() => {
     if (coordinates.length > 0) {
-      const bounds = L.latLngBounds(coordinates.map(([lat, lng]) => [lat, lng]));
+      const bounds = L.latLngBounds(coordinates);
       map.fitBounds(bounds, { padding: [40, 40] });
     }
   }, [coordinates, map]);
   return null;
 }
 
-export default function RouteMap({ visibleModes, origin, destination }: RouteMapProps) {
-  const allCoords = Object.values(mockRoutes).flat();
-  const startPoint: [number, number] = [60.1695, 24.9354];
-  const endPoint: [number, number] = [60.1860, 24.8200];
+export default function RouteMap({
+  visibleModes,
+  origin,
+  destination,
+  routes,
+  startPoint,
+  endPoint,
+}: RouteMapProps) {
+  const allCoords = Object.values(routes).flat();
+  const center: [number, number] =
+    allCoords.length > 0
+      ? [
+          allCoords.reduce((s, c) => s + c[0], 0) / allCoords.length,
+          allCoords.reduce((s, c) => s + c[1], 0) / allCoords.length,
+        ]
+      : startPoint;
 
   return (
     <div className="rounded-lg overflow-hidden border border-border shadow-card">
@@ -52,7 +66,7 @@ export default function RouteMap({ visibleModes, origin, destination }: RouteMap
         </div>
       </div>
       <MapContainer
-        center={[60.178, 24.878]}
+        center={center}
         zoom={13}
         style={{ height: "400px", width: "100%" }}
         scrollWheelZoom={true}
@@ -63,8 +77,8 @@ export default function RouteMap({ visibleModes, origin, destination }: RouteMap
         />
         <FitBounds coordinates={allCoords} />
 
-        {Object.entries(mockRoutes).map(([mode, coords]) =>
-          visibleModes.has(mode) ? (
+        {Object.entries(routes).map(([mode, coords]) =>
+          visibleModes.has(mode) && coords.length > 0 ? (
             <Polyline
               key={mode}
               positions={coords}
