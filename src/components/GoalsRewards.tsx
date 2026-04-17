@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Trophy, Target, Plus, Flame, Route as RouteIcon, Leaf, CheckCircle2, Circle } from "lucide-react";
+import { Trophy, Plus, Flame, Route as RouteIcon, Leaf, CheckCircle2 } from "lucide-react";
+import { startOfWeek, addDays, format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTrips, computeStats } from "@/hooks/useTrips";
 
 interface Goal {
   id: string;
@@ -14,53 +16,6 @@ interface Goal {
   reward: string;
   rewardCategory: "health" | "treats" | "equipment";
 }
-
-const goals: Goal[] = [
-  {
-    id: "1",
-    type: "distance",
-    title: "Century Rider",
-    target: "Cycle 100 km this month",
-    current: 74.3,
-    total: 100,
-    unit: "km",
-    reward: "10% off at Pyöräpaja Helsinki",
-    rewardCategory: "equipment",
-  },
-  {
-    id: "2",
-    type: "caloric",
-    title: "Burn Machine",
-    target: "Burn 5,000 kcal cycling",
-    current: 3100,
-    total: 5000,
-    unit: "kcal",
-    reward: "Free smoothie at Good Life Coffee",
-    rewardCategory: "health",
-  },
-  {
-    id: "3",
-    type: "environmental",
-    title: "Green Commuter",
-    target: "Save 15 kg of CO₂",
-    current: 10.4,
-    total: 15,
-    unit: "kg CO₂",
-    reward: "€5 voucher at Fazer Café",
-    rewardCategory: "treats",
-  },
-  {
-    id: "4",
-    type: "distance",
-    title: "Weekly Warrior",
-    target: "Cycle every weekday",
-    current: 3,
-    total: 5,
-    unit: "days",
-    reward: "Free HSL day ticket",
-    rewardCategory: "treats",
-  },
-];
 
 const typeConfig = {
   distance: { icon: RouteIcon, color: "text-primary", bg: "bg-primary", label: "Distance" },
@@ -77,6 +32,63 @@ const categoryColors = {
 export default function GoalsRewards() {
   const [filter, setFilter] = useState<string>("all");
   const filters = ["all", "distance", "caloric", "environmental"];
+
+  const { data: trips = [] } = useTrips();
+  const stats = computeStats(trips);
+
+  // Weekdays cycled this week
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const weekdaysCycled = Array.from({ length: 5 }, (_, i) => {
+    const dayStr = format(addDays(weekStart, i), "yyyy-MM-dd");
+    return trips.some((t) => t.date === dayStr);
+  }).filter(Boolean).length;
+
+  const goals: Goal[] = [
+    {
+      id: "1",
+      type: "distance",
+      title: "Century Rider",
+      target: "Cycle 100 km this month",
+      current: stats.monthDistanceKm,
+      total: 100,
+      unit: "km",
+      reward: "10% off at Pyöräpaja Helsinki",
+      rewardCategory: "equipment",
+    },
+    {
+      id: "2",
+      type: "caloric",
+      title: "Burn Machine",
+      target: "Burn 5,000 kcal cycling",
+      current: stats.monthCalories,
+      total: 5000,
+      unit: "kcal",
+      reward: "Free smoothie at Good Life Coffee",
+      rewardCategory: "health",
+    },
+    {
+      id: "3",
+      type: "environmental",
+      title: "Green Commuter",
+      target: "Save 15 kg of CO₂",
+      current: stats.monthCo2SavedKg,
+      total: 15,
+      unit: "kg CO₂",
+      reward: "€5 voucher at Fazer Café",
+      rewardCategory: "treats",
+    },
+    {
+      id: "4",
+      type: "distance",
+      title: "Weekly Warrior",
+      target: "Cycle every weekday",
+      current: weekdaysCycled,
+      total: 5,
+      unit: "days",
+      reward: "Free HSL day ticket",
+      rewardCategory: "treats",
+    },
+  ];
 
   const filtered = filter === "all" ? goals : goals.filter((g) => g.type === filter);
 

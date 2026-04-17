@@ -5,6 +5,8 @@ import RoutePlanner from "@/components/RoutePlanner";
 import GoalsRewards from "@/components/GoalsRewards";
 import Competition from "@/components/Competition";
 import RouteConditions from "@/components/RouteConditions";
+import AddTrip from "@/pages/AddTrip";
+import MyTrips from "@/pages/MyTrips";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -13,6 +15,10 @@ const Index = () => {
     switch (activeTab) {
       case "dashboard":
         return <Dashboard />;
+      case "add-trip":
+        return <AddTrip />;
+      case "my-trips":
+        return <MyTrips />;
       case "routes":
         return <RoutePlanner />;
       case "conditions":

@@ -1,6 +1,15 @@
 import { useState } from "react";
-import { Bike, LayoutDashboard, Route, Trophy, Gift, Users, Menu, X, AlertTriangle } from "lucide-react";
+import { Bike, LayoutDashboard, Route, Gift, Users, Menu, X, AlertTriangle, PlusCircle, List, User, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface AppShellProps {
   activeTab: string;
@@ -10,6 +19,8 @@ interface AppShellProps {
 
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "add-trip", label: "Add a Trip", icon: PlusCircle },
+  { id: "my-trips", label: "My Trips", icon: List },
   { id: "routes", label: "Route Planner", icon: Route },
   { id: "conditions", label: "Conditions", icon: AlertTriangle },
   { id: "goals", label: "Goals & Rewards", icon: Gift },
@@ -18,6 +29,7 @@ const navItems = [
 
 export default function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, signOut } = useAuth();
 
   return (
     <div className="min-h-screen bg-background">
@@ -55,6 +67,26 @@ export default function AppShell({ activeTab, onTabChange, children }: AppShellP
               );
             })}
           </nav>
+
+          {/* User menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors text-primary">
+                <User className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <p className="text-xs text-muted-foreground">Signed in as</p>
+                <p className="text-sm font-medium truncate">{user?.email}</p>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={signOut} className="text-destructive focus:text-destructive cursor-pointer">
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Mobile menu toggle */}
           <button
