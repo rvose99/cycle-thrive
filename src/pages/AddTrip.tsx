@@ -8,8 +8,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, CheckCircle2, RotateCcw, MapPin, Navigation, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { addLocalTrip } from "@/lib/localStore";
+import { supabase } from "@/lib/supabase";
 import { startIcon, endIcon } from "@/lib/leafletIcons";
 import {
   geocode,
@@ -66,7 +67,7 @@ interface SavedStats {
 }
 
 export default function AddTrip() {
-  const { user } = useAuth();
+  const { user, authSource } = useAuth();
   const queryClient = useQueryClient();
 
   const [mode, setMode] = useState<Mode>("cycling");
@@ -211,8 +212,7 @@ export default function AddTrip() {
     const co2SavedG = mode === "car" ? 0 : Math.round(driveKm * 150);
     const costSavedEur = mode === "car" ? 0 : Math.round((driveKm * 0.25 + 2) * 100) / 100;
 
-    const { error: dbError } = await supabase.from("trips").insert({
-      user_id: user.id,
+    const trip = {
       date,
       origin: startInput || `${startPt.lat.toFixed(4)},${startPt.lon.toFixed(4)}`,
       destination: endInput || `${endPt.lat.toFixed(4)},${endPt.lon.toFixed(4)}`,
@@ -222,19 +222,30 @@ export default function AddTrip() {
       kcal,
       cost_saved_eur: costSavedEur,
       trip_type: tripType,
-    });
+    };
 
-    if (dbError) {
-      setError(dbError.message);
+    if (authSource === "local") {
+      addLocalTrip(user.id, trip);
     } else {
-      await queryClient.invalidateQueries({ queryKey: ["trips", user.id] });
-      setSaved({
-        distanceKm: Math.round(distanceKm * 10) / 10,
-        co2SavedKg: Math.round(co2SavedG / 100) / 10,
-        kcal,
-        costSavedEur,
+      const { error: dbError } = await supabase.from("trips").insert({
+        user_id: user.id,
+        ...trip,
       });
+
+      if (dbError) {
+        setError(dbError.message);
+        setSaving(false);
+        return;
+      }
     }
+
+    await queryClient.invalidateQueries({ queryKey: ["trips", authSource, user.id] });
+    setSaved({
+      distanceKm: Math.round(distanceKm * 10) / 10,
+      co2SavedKg: Math.round(co2SavedG / 100) / 10,
+      kcal,
+      costSavedEur,
+    });
     setSaving(false);
   };
 

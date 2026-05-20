@@ -6,6 +6,7 @@ import {
   CircleMarker,
   Popup,
   useMap,
+  useMapEvents,
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -27,11 +28,28 @@ function FitToReports({ reports }: { reports: ConditionReport[] }) {
   return null;
 }
 
-interface ConditionMapProps {
-  reports: ConditionReport[];
+function MapClickHandler({ onMapClick }: { onMapClick: (point: [number, number]) => void }) {
+  useMapEvents({
+    click: (event) => onMapClick([event.latlng.lat, event.latlng.lng]),
+  });
+  return null;
 }
 
-export default function ConditionMap({ reports }: ConditionMapProps) {
+interface ConditionMapProps {
+  reports: ConditionReport[];
+  draftPoint?: [number, number];
+  draftSectionStart?: [number, number];
+  draftSectionEnd?: [number, number];
+  onMapClick?: (point: [number, number]) => void;
+}
+
+export default function ConditionMap({
+  reports,
+  draftPoint,
+  draftSectionStart,
+  draftSectionEnd,
+  onMapClick,
+}: ConditionMapProps) {
   // Default center: Helsinki
   const defaultCenter: [number, number] = [60.1699, 24.9384];
 
@@ -61,7 +79,62 @@ export default function ConditionMap({ reports }: ConditionMapProps) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        {onMapClick && <MapClickHandler onMapClick={onMapClick} />}
         {reports.length > 0 && <FitToReports reports={reports} />}
+
+        {draftPoint && (
+          <CircleMarker
+            center={draftPoint}
+            radius={8}
+            pathOptions={{
+              color: "hsl(var(--primary))",
+              fillColor: "hsl(var(--primary))",
+              fillOpacity: 0.4,
+              weight: 2,
+              dashArray: "4 4",
+            }}
+          />
+        )}
+
+        {draftSectionStart && (
+          <CircleMarker
+            center={draftSectionStart}
+            radius={8}
+            pathOptions={{
+              color: "hsl(var(--primary))",
+              fillColor: "hsl(var(--primary))",
+              fillOpacity: 0.4,
+              weight: 2,
+              dashArray: "4 4",
+            }}
+          />
+        )}
+
+        {draftSectionEnd && (
+          <CircleMarker
+            center={draftSectionEnd}
+            radius={8}
+            pathOptions={{
+              color: "hsl(var(--accent))",
+              fillColor: "hsl(var(--accent))",
+              fillOpacity: 0.4,
+              weight: 2,
+              dashArray: "4 4",
+            }}
+          />
+        )}
+
+        {draftSectionStart && draftSectionEnd && (
+          <Polyline
+            positions={[draftSectionStart, draftSectionEnd]}
+            pathOptions={{
+              color: "hsl(var(--primary))",
+              weight: 3,
+              opacity: 0.6,
+              dashArray: "8 8",
+            }}
+          />
+        )}
 
         {reports.map((report) => {
           if (report.type === "point" && report.point) {

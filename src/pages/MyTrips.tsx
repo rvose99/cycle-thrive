@@ -7,9 +7,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, Loader2, Trash2, MapPin, Bike, Footprints, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTrips, type Trip } from "@/hooks/useTrips";
+import { deleteLocalTrip } from "@/lib/localStore";
+import { supabase } from "@/lib/supabase";
 import { startIcon, endIcon } from "@/lib/leafletIcons";
 import {
   geocode,
@@ -200,7 +201,7 @@ function TripCard({
 }
 
 export default function MyTrips() {
-  const { user } = useAuth();
+  const { user, authSource } = useAuth();
   const queryClient = useQueryClient();
   const { data: trips = [], isLoading } = useTrips();
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -210,8 +211,15 @@ export default function MyTrips() {
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from("trips").delete().eq("id", id);
-    await queryClient.invalidateQueries({ queryKey: ["trips", user?.id] });
+    if (!user) return;
+
+    if (authSource === "local") {
+      deleteLocalTrip(user.id, id);
+    } else {
+      await supabase.from("trips").delete().eq("id", id).eq("user_id", user.id);
+    }
+
+    await queryClient.invalidateQueries({ queryKey: ["trips", authSource, user?.id] });
     if (expandedId === id) setExpandedId(null);
   };
 

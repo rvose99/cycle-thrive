@@ -37,7 +37,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={<Bike className="h-5 w-5" />}
-          label="Distance This Week"
+          label="Distance Last 7 Days"
           value={`${stats.weekDistanceKm} km`}
           subtext={`${stats.weekCalories} kcal burned`}
           colorClass="bg-primary"
@@ -45,7 +45,7 @@ export default function Dashboard() {
         />
         <StatCard
           icon={<Leaf className="h-5 w-5" />}
-          label="CO₂ Saved This Week"
+          label="CO₂ Saved Last 7 Days"
           value={`${stats.weekCo2SavedKg} kg`}
           subtext="vs. driving a car"
           colorClass="bg-eco"
@@ -53,7 +53,7 @@ export default function Dashboard() {
         />
         <StatCard
           icon={<BarChart3 className="h-5 w-5" />}
-          label="Money Saved This Week"
+          label="Money Saved Last 7 Days"
           value={`€${stats.weekCostSavedEur.toFixed(2)}`}
           subtext="vs. driving a car"
           colorClass="bg-accent"
@@ -84,7 +84,7 @@ export default function Dashboard() {
               <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-gray-400" />Car</span>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground mb-6">Distance this week by mode (car trips &gt;50 km excluded)</p>
+          <p className="text-sm text-muted-foreground mb-6">Distance over the last 7 days by mode (car trips &gt;50 km excluded)</p>
           {isLoading ? (
             <div className="flex items-center justify-center text-sm text-muted-foreground" style={{ height: "160px" }}>Loading…</div>
           ) : (

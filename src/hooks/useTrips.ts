@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { startOfWeek, startOfMonth, endOfMonth, addDays, format } from "date-fns";
-import { supabase } from "@/lib/supabase";
+import { startOfMonth, endOfMonth, addDays, format, startOfDay, subDays } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { getLocalTrips } from "@/lib/localStore";
+import { supabase } from "@/lib/supabase";
 
 export interface Trip {
   id: string;
@@ -23,16 +24,24 @@ export function tripMode(trip: Trip): "cycling" | "walking" | "car" {
 }
 
 export function useTrips() {
-  const { user } = useAuth();
+  const { user, authSource } = useAuth();
 
   return useQuery({
-    queryKey: ["trips", user?.id],
+    queryKey: ["trips", authSource, user?.id],
     enabled: !!user,
     queryFn: async () => {
+      if (!user) return [];
+
+      if (authSource === "local") {
+        return getLocalTrips(user.id);
+      }
+
       const { data, error } = await supabase
         .from("trips")
         .select("id, date, origin, destination, distance_m, duration_s, co2_saved_g, kcal, cost_saved_eur, trip_type")
+        .eq("user_id", user.id)
         .order("date", { ascending: false });
+
       if (error) throw error;
       return data as Trip[];
     },
@@ -41,11 +50,14 @@ export function useTrips() {
 
 export function computeStats(trips: Trip[]) {
   const now = new Date();
-  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+  const today = startOfDay(now);
+  const rollingStart = subDays(today, 6);
+  const todayStr = format(today, "yyyy-MM-dd");
+  const rollingStartStr = format(rollingStart, "yyyy-MM-dd");
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
 
-  const weekTrips = trips.filter((t) => new Date(t.date) >= weekStart);
+  const weekTrips = trips.filter((t) => t.date >= rollingStartStr && t.date <= todayStr);
   const monthTrips = trips.filter((t) => {
     const d = new Date(t.date);
     return d >= monthStart && d <= monthEnd;
@@ -56,7 +68,7 @@ export function computeStats(trips: Trip[]) {
     arr.filter((t) => !(tripMode(t) === "car" && t.distance_m > 50000));
 
   const weeklyActivity = Array.from({ length: 7 }, (_, i) => {
-    const day = addDays(weekStart, i);
+    const day = addDays(rollingStart, i);
     const dayStr = format(day, "yyyy-MM-dd");
     const dayTrips = chartTrips(weekTrips).filter((t) => t.date === dayStr);
 

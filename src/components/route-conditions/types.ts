@@ -3,6 +3,7 @@ export type ReportType = "point" | "section";
 
 export interface ConditionReport {
   id: string;
+  userId?: string;
   type: ReportType;
   rating: ConditionRating;
   reason: string;

@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function Login() {
-  const { session, loading } = useAuth();
+  const { session, loading, signIn, createAccount } = useAuth();
+  const [mode, setMode] = useState<"sign-in" | "create-account">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   if (loading) return null;
@@ -20,14 +22,34 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setMessage(null);
     setSubmitting(true);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      setError(error.message);
+    if (mode === "create-account" && password !== confirmPassword) {
+      setError("Passwords do not match.");
+      setSubmitting(false);
+      return;
     }
+
+    try {
+      if (mode === "sign-in") {
+        await signIn(email, password);
+      } else {
+        await createAccount(email, password);
+        setMessage("Account created locally in this browser.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    }
+
     setSubmitting(false);
+  };
+
+  const switchMode = () => {
+    setMode((current) => (current === "sign-in" ? "create-account" : "sign-in"));
+    setError(null);
+    setMessage(null);
+    setConfirmPassword("");
   };
 
   return (
@@ -35,6 +57,9 @@ export default function Login() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl text-center">Cycle Thrive</CardTitle>
+          <CardDescription className="text-center">
+            {mode === "sign-in" ? "Sign in to continue" : "Create an account to start tracking"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -54,17 +79,45 @@ export default function Login() {
               <Input
                 id="password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
+            {mode === "create-account" && (
+              <div className="space-y-1">
+                <Label htmlFor="confirm-password">Confirm password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
+            )}
             {error && <p className="text-sm text-destructive">{error}</p>}
+            {message && <p className="text-sm text-eco">{message}</p>}
             <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Signing in…" : "Sign in"}
+              {submitting
+                ? mode === "sign-in"
+                  ? "Signing in..."
+                  : "Creating account..."
+                : mode === "sign-in"
+                ? "Sign in"
+                : "Create account"}
             </Button>
           </form>
+          <div className="mt-5 border-t border-border pt-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              {mode === "sign-in" ? "Need an account?" : "Already have an account?"}
+            </p>
+            <Button type="button" variant="link" className="h-auto p-0" onClick={switchMode}>
+              {mode === "sign-in" ? "Create account" : "Sign in instead"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

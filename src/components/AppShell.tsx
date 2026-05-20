@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Bike, LayoutDashboard, Route, Gift, Users, Menu, X, AlertTriangle, PlusCircle, List, User, LogOut } from "lucide-react";
+import { Bike, LayoutDashboard, Route, Gift, Users, Menu, X, AlertTriangle, PlusCircle, List, User, LogOut, Trash2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +11,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface AppShellProps {
   activeTab: string;
@@ -29,7 +40,22 @@ const navItems = [
 
 export default function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const { user, authSource, signOut, deleteAccount } = useAuth();
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    setDeleteError(null);
+
+    try {
+      await deleteAccount();
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Could not delete your account.");
+      setDeletingAccount(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -69,24 +95,53 @@ export default function AppShell({ activeTab, onTabChange, children }: AppShellP
           </nav>
 
           {/* User menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors text-primary">
-                <User className="h-4 w-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="font-normal">
-                <p className="text-xs text-muted-foreground">Signed in as</p>
-                <p className="text-sm font-medium truncate">{user?.email}</p>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={signOut} className="text-destructive focus:text-destructive cursor-pointer">
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors text-primary">
+                  <User className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <p className="text-xs text-muted-foreground">Signed in as</p>
+                  <p className="text-sm font-medium truncate">{user?.email}</p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <AlertDialogTrigger asChild>
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive cursor-pointer"
+                    onSelect={(event) => event.preventDefault()}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete data
+                  </DropdownMenuItem>
+                </AlertDialogTrigger>
+                <DropdownMenuItem onClick={signOut} className="cursor-pointer">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete your data and account?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {authSource === "local"
+                    ? "This permanently deletes your local trips and removes this browser's account. You will be signed out when it finishes."
+                    : "This permanently deletes your database trips and signs you out. Your Supabase account itself will remain available."}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deletingAccount}>Cancel</AlertDialogCancel>
+                <Button variant="destructive" onClick={handleDeleteAccount} disabled={deletingAccount}>
+                  {deletingAccount && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Delete data
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           {/* Mobile menu toggle */}
           <button

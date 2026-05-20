@@ -12,6 +12,12 @@ import {
 } from "./types";
 
 interface ConditionReportFormProps {
+  type: ReportType;
+  locationQuery: string;
+  endLocationQuery: string;
+  onTypeChange: (type: ReportType) => void;
+  onLocationQueryChange: (value: string) => void;
+  onEndLocationQueryChange: (value: string) => void;
   onSubmit: (data: {
     type: ReportType;
     rating: ConditionRating;
@@ -32,13 +38,19 @@ const ratingConfig: Record<
   bad: { icon: AlertTriangle, colorClass: "text-destructive", bgClass: "bg-destructive/10 border-destructive/30" },
 };
 
-export default function ConditionReportForm({ onSubmit, isLoading }: ConditionReportFormProps) {
-  const [type, setType] = useState<ReportType>("point");
+export default function ConditionReportForm({
+  type,
+  locationQuery,
+  endLocationQuery,
+  onTypeChange,
+  onLocationQueryChange,
+  onEndLocationQueryChange,
+  onSubmit,
+  isLoading,
+}: ConditionReportFormProps) {
   const [rating, setRating] = useState<ConditionRating>("mediocre");
   const [reason, setReason] = useState<string>(faultReasons[0]);
   const [description, setDescription] = useState("");
-  const [locationQuery, setLocationQuery] = useState("");
-  const [endLocationQuery, setEndLocationQuery] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +81,7 @@ export default function ConditionReportForm({ onSubmit, isLoading }: ConditionRe
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setType(item.id)}
+                onClick={() => onTypeChange(item.id)}
                 className={cn(
                   "flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors",
                   type === item.id
@@ -94,7 +106,7 @@ export default function ConditionReportForm({ onSubmit, isLoading }: ConditionRe
           <Input
             placeholder="e.g. Mannerheimintie 10, Helsinki"
             value={locationQuery}
-            onChange={(e) => setLocationQuery(e.target.value)}
+            onChange={(e) => onLocationQueryChange(e.target.value)}
             required
           />
         </div>
@@ -104,7 +116,7 @@ export default function ConditionReportForm({ onSubmit, isLoading }: ConditionRe
             <Input
               placeholder="e.g. Töölönkatu 3, Helsinki"
               value={endLocationQuery}
-              onChange={(e) => setEndLocationQuery(e.target.value)}
+              onChange={(e) => onEndLocationQueryChange(e.target.value)}
               required
             />
           </div>
