@@ -19,7 +19,23 @@ export interface AllRoutesResult {
   driving: OSRMResult;
 }
 
+const parseCoordinateQuery = (query: string): GeocodedPoint | null => {
+  const match = query.trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
+  if (!match) return null;
+
+  const lat = Number(match[1]);
+  const lon = Number(match[2]);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+
+  return { lat, lon };
+};
+
 export async function geocode(address: string): Promise<GeocodedPoint> {
+  const coordinate = parseCoordinateQuery(address);
+  if (coordinate) return coordinate;
+
   const url = `${NOMINATIM_URL}?q=${encodeURIComponent(address)}&format=json&limit=1`;
   const res = await fetch(url, { headers: { "Accept-Language": "en" } });
   if (!res.ok) throw new Error("Geocoding request failed");

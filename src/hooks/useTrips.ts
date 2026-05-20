@@ -9,6 +9,10 @@ export interface Trip {
   date: string;
   origin: string;
   destination: string;
+  start_lat?: number | null;
+  start_lon?: number | null;
+  end_lat?: number | null;
+  end_lon?: number | null;
   distance_m: number;
   duration_s: number;
   co2_saved_g: number;
@@ -38,7 +42,7 @@ export function useTrips() {
 
       const { data, error } = await supabase
         .from("trips")
-        .select("id, date, origin, destination, distance_m, duration_s, co2_saved_g, kcal, cost_saved_eur, trip_type")
+        .select("id, date, origin, destination, start_lat, start_lon, end_lat, end_lon, distance_m, duration_s, co2_saved_g, kcal, cost_saved_eur, trip_type")
         .eq("user_id", user.id)
         .order("date", { ascending: false });
 

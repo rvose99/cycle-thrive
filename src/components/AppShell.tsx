@@ -105,7 +105,9 @@ export default function AppShell({ activeTab, onTabChange, children }: AppShellP
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel className="font-normal">
                   <p className="text-xs text-muted-foreground">Signed in as</p>
-                  <p className="text-sm font-medium truncate">{user?.email}</p>
+                  <p className="text-sm font-medium truncate">
+                    {"username" in (user ?? {}) ? user?.username : user?.email}
+                  </p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <AlertDialogTrigger asChild>

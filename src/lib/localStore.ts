@@ -7,6 +7,7 @@ const tripsKey = (userId: string) => `cycle-thrive:trips:${userId}`;
 export interface LocalUser {
   id: string;
   email: string;
+  username: string;
 }
 
 interface LocalAccount extends LocalUser {
@@ -26,44 +27,51 @@ const writeJson = (key: string, value: unknown) => {
   localStorage.setItem(key, JSON.stringify(value));
 };
 
-const normalizeEmail = (email: string) => email.trim().toLowerCase();
+const normalizeUsername = (username: string) => username.trim().toLowerCase();
 
 export function getCurrentUser(): LocalUser | null {
   return readJson<LocalUser | null>(CURRENT_USER_KEY, null);
 }
 
-export function createLocalAccount(email: string, password: string): LocalUser {
-  const normalizedEmail = normalizeEmail(email);
+export function createLocalAccount(username: string, password: string): LocalUser {
+  const normalizedUsername = normalizeUsername(username);
   const accounts = readJson<LocalAccount[]>(ACCOUNTS_KEY, []);
 
-  if (accounts.some((account) => account.email === normalizedEmail)) {
-    throw new Error("An account already exists for this email in this browser.");
+  if (!normalizedUsername) {
+    throw new Error("Enter a username.");
+  }
+
+  if (accounts.some((account) => account.username === normalizedUsername || account.email === normalizedUsername)) {
+    throw new Error("An account already exists for this username in this browser.");
   }
 
   const account: LocalAccount = {
     id: crypto.randomUUID(),
-    email: normalizedEmail,
+    email: normalizedUsername,
+    username: normalizedUsername,
     password,
   };
 
   writeJson(ACCOUNTS_KEY, [...accounts, account]);
-  const user = { id: account.id, email: account.email };
+  const user = { id: account.id, email: account.email, username: account.username };
   writeJson(CURRENT_USER_KEY, user);
   return user;
 }
 
-export function signInLocalAccount(email: string, password: string): LocalUser {
-  const normalizedEmail = normalizeEmail(email);
+export function signInLocalAccount(username: string, password: string): LocalUser {
+  const normalizedUsername = normalizeUsername(username);
   const accounts = readJson<LocalAccount[]>(ACCOUNTS_KEY, []);
   const account = accounts.find(
-    (candidate) => candidate.email === normalizedEmail && candidate.password === password,
+    (candidate) =>
+      (candidate.username === normalizedUsername || candidate.email === normalizedUsername) &&
+      candidate.password === password,
   );
 
   if (!account) {
-    throw new Error("No local account found with that email and password.");
+    throw new Error("No local account found with that username and password.");
   }
 
-  const user = { id: account.id, email: account.email };
+  const user = { id: account.id, email: account.email, username: account.username ?? account.email };
   writeJson(CURRENT_USER_KEY, user);
   return user;
 }

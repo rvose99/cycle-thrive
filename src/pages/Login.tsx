@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 export default function Login() {
   const { session, loading, signIn, createAccount } = useAuth();
   const [mode, setMode] = useState<"sign-in" | "create-account">("sign-in");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -33,9 +33,9 @@ export default function Login() {
 
     try {
       if (mode === "sign-in") {
-        await signIn(email, password);
+        await signIn(username, password);
       } else {
-        await createAccount(email, password);
+        await createAccount(username, password);
         setMessage("Account created locally in this browser.");
       }
     } catch (err) {
@@ -64,14 +64,14 @@ export default function Login() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">{mode === "sign-in" ? "Username or email" : "Username"}</Label>
               <Input
-                id="email"
-                type="email"
-                autoComplete="email"
+                id="username"
+                type="text"
+                autoComplete="username"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
             </div>
             <div className="space-y-1">

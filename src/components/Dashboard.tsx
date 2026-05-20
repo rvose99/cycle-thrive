@@ -1,6 +1,9 @@
-import { Bike, BarChart3, Trophy, Leaf, MapPin } from "lucide-react";
+import { useState } from "react";
+import { Bike, BarChart3, Trophy, Leaf, MapPin, Loader2, Wand2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useTrips, computeStats } from "@/hooks/useTrips";
+import { useTrips, computeStats, tripMode } from "@/hooks/useTrips";
+import { Button } from "@/components/ui/button";
+import { fetchCyclingRouteDirect, geocode, type GeocodedPoint } from "@/components/route-planner/routingService";
 
 interface StatCardProps {
   icon: React.ReactNode;
@@ -27,10 +30,95 @@ const StatCard = ({ icon, label, value, subtext, colorClass = "bg-primary", dela
   </div>
 );
 
+interface WhatIfResult {
+  carTrips: number;
+  co2SavedKg: number;
+  moneySavedEur: number;
+  netTimeMin: number;
+  failedRoutes: number;
+}
+
+const formatDuration = (minutes: number) => {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours} h ${mins} min` : `${hours} h`;
+};
+
+const hasSavedCoordinates = (trip: {
+  start_lat?: number | null;
+  start_lon?: number | null;
+  end_lat?: number | null;
+  end_lon?: number | null;
+}) =>
+  [trip.start_lat, trip.start_lon, trip.end_lat, trip.end_lon].every(
+    (value) => typeof value === "number" && Number.isFinite(value),
+  );
+
 export default function Dashboard() {
   const { data: trips = [], isLoading } = useTrips();
+  const [whatIfLoading, setWhatIfLoading] = useState(false);
+  const [whatIfError, setWhatIfError] = useState<string | null>(null);
+  const [whatIfResult, setWhatIfResult] = useState<WhatIfResult | null>(null);
   const stats = computeStats(trips);
   const maxKm = Math.max(...stats.weeklyActivity.map((d) => d.total), 1);
+  const carTrips = trips.filter((trip) => tripMode(trip) === "car");
+
+  const handleWhatIfCycling = async () => {
+    setWhatIfLoading(true);
+    setWhatIfError(null);
+    setWhatIfResult(null);
+
+    try {
+      const routeResults = await Promise.allSettled(
+        carTrips.map(async (trip) => {
+          const [origin, destination]: [GeocodedPoint, GeocodedPoint] = hasSavedCoordinates(trip)
+            ? [
+                { lat: trip.start_lat!, lon: trip.start_lon! },
+                { lat: trip.end_lat!, lon: trip.end_lon! },
+              ]
+            : await Promise.all([
+                geocode(trip.origin),
+                geocode(trip.destination),
+              ]);
+          const cycling = await fetchCyclingRouteDirect(origin, destination);
+          const carDistanceKm = trip.distance_m / 1000;
+          const timeDeltaS = trip.duration_s - cycling.durationS;
+
+          return {
+            co2SavedG: Math.round(carDistanceKm * 150),
+            moneySavedEur: Math.round((carDistanceKm * 0.25 + 2) * 100) / 100,
+            netTimeS: timeDeltaS,
+          };
+        }),
+      );
+
+      const successful = routeResults.filter((result) => result.status === "fulfilled");
+      const totals = successful.reduce(
+        (sum, result) => {
+          if (result.status !== "fulfilled") return sum;
+          return {
+            co2SavedG: sum.co2SavedG + result.value.co2SavedG,
+            moneySavedEur: sum.moneySavedEur + result.value.moneySavedEur,
+            netTimeS: sum.netTimeS + result.value.netTimeS,
+          };
+        },
+        { co2SavedG: 0, moneySavedEur: 0, netTimeS: 0 },
+      );
+
+      setWhatIfResult({
+        carTrips: successful.length,
+        co2SavedKg: Math.round(totals.co2SavedG / 100) / 10,
+        moneySavedEur: Math.round(totals.moneySavedEur * 100) / 100,
+        netTimeMin: Math.round(totals.netTimeS / 60),
+        failedRoutes: routeResults.length - successful.length,
+      });
+    } catch (error) {
+      setWhatIfError(error instanceof Error ? error.message : "Could not calculate cycling alternatives.");
+    } finally {
+      setWhatIfLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -71,6 +159,55 @@ export default function Dashboard() {
           colorClass="bg-competition"
           delay={300}
         />
+      </div>
+
+      <div className="bg-card rounded-lg shadow-card p-6 animate-fade-in" style={{ animationDelay: "150ms" }}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="font-semibold text-lg">Car Trip Alternative</h3>
+            <p className="text-sm text-muted-foreground">
+              Reroute your logged car trips by bicycle and estimate what could have been avoided.
+            </p>
+          </div>
+          <Button onClick={handleWhatIfCycling} disabled={whatIfLoading || isLoading || carTrips.length === 0}>
+            {whatIfLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+            What if you would have cycled?
+          </Button>
+        </div>
+
+        {carTrips.length === 0 && !isLoading && (
+          <p className="text-sm text-muted-foreground mt-4">No car trips logged yet.</p>
+        )}
+
+        {whatIfError && <p className="text-sm text-destructive mt-4">{whatIfError}</p>}
+
+        {whatIfResult && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
+            <div className="rounded-lg bg-secondary/50 p-4">
+              <p className="text-xs text-muted-foreground">CO₂ avoidable</p>
+              <p className="text-xl font-bold text-eco">{whatIfResult.co2SavedKg} kg</p>
+            </div>
+            <div className="rounded-lg bg-secondary/50 p-4">
+              <p className="text-xs text-muted-foreground">Money avoidable</p>
+              <p className="text-xl font-bold text-accent">€{whatIfResult.moneySavedEur.toFixed(2)}</p>
+            </div>
+            <div className="rounded-lg bg-secondary/50 p-4">
+              <p className="text-xs text-muted-foreground">Time impact</p>
+              <p className="text-xl font-bold">
+                {whatIfResult.netTimeMin > 0
+                  ? `${formatDuration(whatIfResult.netTimeMin)} saved`
+                  : whatIfResult.netTimeMin < 0
+                  ? `${formatDuration(Math.abs(whatIfResult.netTimeMin))} extra`
+                  : "No difference"}
+              </p>
+            </div>
+            <p className="sm:col-span-3 text-xs text-muted-foreground">
+              Calculated from {whatIfResult.carTrips} car trip{whatIfResult.carTrips === 1 ? "" : "s"}
+              {whatIfResult.failedRoutes > 0 ? `; ${whatIfResult.failedRoutes} route${whatIfResult.failedRoutes === 1 ? "" : "s"} could not be calculated` : ""}.
+              Time impact compares route travel only, without time spent finding car parking.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

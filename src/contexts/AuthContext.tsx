@@ -20,8 +20,8 @@ interface AuthContextValue {
   user: LocalUser | User | null;
   authSource: "local" | "supabase" | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  createAccount: (email: string, password: string) => Promise<void>;
+  signIn: (usernameOrEmail: string, password: string) => Promise<void>;
+  createAccount: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
@@ -55,17 +55,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (usernameOrEmail: string, password: string) => {
     try {
-      const user = signInLocalAccount(email, password);
+      const user = signInLocalAccount(usernameOrEmail, password);
       await supabase.auth.signOut();
       setSession({ user, source: "local" });
       return;
     } catch {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: usernameOrEmail,
+        password,
+      });
 
       if (error || !data.user) {
-        throw new Error(error?.message ?? "No account found with that email and password.");
+        throw new Error(error?.message ?? "No account found with that username/email and password.");
       }
 
       signOutLocalAccount();
@@ -73,8 +76,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const createAccount = async (email: string, password: string) => {
-    const user = createLocalAccount(email, password);
+  const createAccount = async (username: string, password: string) => {
+    const user = createLocalAccount(username, password);
     await supabase.auth.signOut();
     setSession({ user, source: "local" });
   };
