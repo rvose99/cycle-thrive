@@ -34,6 +34,7 @@ interface WhatIfResult {
   carTrips: number;
   co2SavedKg: number;
   moneySavedEur: number;
+  caloriesBurned: number;
   netTimeMin: number;
   failedRoutes: number;
 }
@@ -88,6 +89,7 @@ export default function Dashboard() {
           return {
             co2SavedG: Math.round(carDistanceKm * 150),
             moneySavedEur: Math.round((carDistanceKm * 0.25 + 2) * 100) / 100,
+            caloriesBurned: Math.round((cycling.distanceM / 1000) * 35),
             netTimeS: timeDeltaS,
           };
         }),
@@ -100,16 +102,18 @@ export default function Dashboard() {
           return {
             co2SavedG: sum.co2SavedG + result.value.co2SavedG,
             moneySavedEur: sum.moneySavedEur + result.value.moneySavedEur,
+            caloriesBurned: sum.caloriesBurned + result.value.caloriesBurned,
             netTimeS: sum.netTimeS + result.value.netTimeS,
           };
         },
-        { co2SavedG: 0, moneySavedEur: 0, netTimeS: 0 },
+        { co2SavedG: 0, moneySavedEur: 0, caloriesBurned: 0, netTimeS: 0 },
       );
 
       setWhatIfResult({
         carTrips: successful.length,
         co2SavedKg: Math.round(totals.co2SavedG / 100) / 10,
         moneySavedEur: Math.round(totals.moneySavedEur * 100) / 100,
+        caloriesBurned: totals.caloriesBurned,
         netTimeMin: Math.round(totals.netTimeS / 60),
         failedRoutes: routeResults.length - successful.length,
       });
@@ -182,7 +186,7 @@ export default function Dashboard() {
         {whatIfError && <p className="text-sm text-destructive mt-4">{whatIfError}</p>}
 
         {whatIfResult && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
             <div className="rounded-lg bg-secondary/50 p-4">
               <p className="text-xs text-muted-foreground">CO₂ avoidable</p>
               <p className="text-xl font-bold text-eco">{whatIfResult.co2SavedKg} kg</p>
@@ -192,7 +196,11 @@ export default function Dashboard() {
               <p className="text-xl font-bold text-accent">€{whatIfResult.moneySavedEur.toFixed(2)}</p>
             </div>
             <div className="rounded-lg bg-secondary/50 p-4">
-              <p className="text-xs text-muted-foreground">Time impact</p>
+              <p className="text-xs text-muted-foreground">Cycling calories</p>
+              <p className="text-xl font-bold">{whatIfResult.caloriesBurned} kcal</p>
+            </div>
+            <div className="rounded-lg bg-secondary/50 p-4">
+              <p className="text-xs text-muted-foreground">Time difference</p>
               <p className="text-xl font-bold">
                 {whatIfResult.netTimeMin > 0
                   ? `${formatDuration(whatIfResult.netTimeMin)} saved`
@@ -201,10 +209,10 @@ export default function Dashboard() {
                   : "No difference"}
               </p>
             </div>
-            <p className="sm:col-span-3 text-xs text-muted-foreground">
+            <p className="sm:col-span-2 lg:col-span-4 text-xs text-muted-foreground">
               Calculated from {whatIfResult.carTrips} car trip{whatIfResult.carTrips === 1 ? "" : "s"}
               {whatIfResult.failedRoutes > 0 ? `; ${whatIfResult.failedRoutes} route${whatIfResult.failedRoutes === 1 ? "" : "s"} could not be calculated` : ""}.
-              Time impact compares route travel only, without time spent finding car parking.
+              Time difference is driving route time minus cycling route time, without time spent finding car parking. Calories assume city-bike effort at 35 kcal/km.
             </p>
           </div>
         )}
